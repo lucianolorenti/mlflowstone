@@ -13,6 +13,7 @@ import mlflow
 import numpy as np
 import pandas as pd
 import sklearn
+from mlflow.entities import FileInfo
 from mlflow.exceptions import MlflowException
 from mlflow.models.model import Model
 from mlflow.tracking.client import MlflowClient
@@ -192,3 +193,15 @@ class MLWolfRun:
         runs = self.client.search_runs(self.experiment.id,
                                        filter_string=f"tags.mlflow.parentRunId = '{self.id}'")
         return [MLWolfRun(run, self.experiment) for run in runs]
+
+    def list_artifacts(self, full_path=True) -> list:
+        artifacts = self.client.list_artifacts(self.id)
+        if full_path:
+            return [FileInfo(self.full_path(fi), fi.is_dir, fi.file_size) for fi in artifacts]
+
+        return artifacts
+
+    def full_path(self, filename: Union[str, FileInfo]) -> Union[Path, str]:
+        if isinstance(filename, FileInfo):
+            filename = filename.path
+        return self.experiment.models_path / self.id / 'artifacts' / filename

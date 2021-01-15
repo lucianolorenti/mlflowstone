@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pandas as pd
 from mlwolf.store import MLWolflStore
 from sklearn import datasets, svm
 from sklearn.model_selection import GridSearchCV
@@ -27,3 +28,10 @@ class TestStore():
         runs = store.experiment('TestCV').last_parent_run().childs()
 
         assert len(runs) == 4
+
+        artifacts = runs[0].list_artifacts(full_path=True)
+
+        assert len(artifacts) == 4
+
+        results = [f for f in artifacts if str(f.path).endswith('.csv')][0]
+        assert pd.read_csv(results.path).shape[0] == 4
