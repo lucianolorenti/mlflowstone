@@ -14,10 +14,9 @@ class TestStore():
         clf = GridSearchCV(svc, parameters)
         clf.fit(iris.data, iris.target)
 
-        #PATH = Path(__file__).resolve().parent
-        PATH = Path('.').resolve().parent
+        PATH = Path(__file__).resolve().parent
 
-        store = MLWolflStore(f'sqlite:////home/luciano/pirulo.sqlite')
+        store = MLWolflStore(f'sqlite:///{PATH}/test.sqlite')
 
         (store
          .experiment('TestCV', Path('.').resolve())
