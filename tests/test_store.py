@@ -1,7 +1,7 @@
 from pathlib import Path
 
+import mlflowstone as mlflows
 import pandas as pd
-from mlwolf.store import MLWolflStore
 from sklearn import datasets, svm
 from sklearn.model_selection import GridSearchCV
 
@@ -17,7 +17,7 @@ class TestStore():
 
         PATH = Path(__file__).resolve().parent
 
-        store = MLWolflStore(f'sqlite:///{PATH}/test.sqlite')
+        store = mlflows.Store(f'sqlite:///{PATH}/test.sqlite')
 
         (store
          .experiment('TestCV', Path('.').resolve())

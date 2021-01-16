@@ -25,7 +25,7 @@ from sklearn.model_selection import GridSearchCV
 logger = logging.getLogger(__name__)
 
 
-class MLWolflStore:
+class Store:
     def __init__(self, tracking_uri: str):
         self.tracking_uri = tracking_uri
 
@@ -34,11 +34,11 @@ class MLWolflStore:
         return MlflowClient(self.tracking_uri)
 
     def experiment(self, name: str, models_path: Path = None):
-        return MLWolfExperiment(name, self, models_path)
+        return Experiment(name, self, models_path)
 
 
-class MLWolfExperiment:
-    def __init__(self, name, store: MLWolflStore, models_path: Path = None):
+class Experiment:
+    def __init__(self, name, store: Store, models_path: Path = None):
         self.store = store
         self.client = self.store.client
         self.models_path = models_path
@@ -54,27 +54,27 @@ class MLWolfExperiment:
             self.id = experiment.experiment_id
 
     def start_run(self, name=None):
-        return MLWolfRun.create(name, self)
+        return Run.create(name, self)
 
     def last_parent_run(self):
         run = self.client.search_runs(self.id,
                                       filter_string="tags.mlflow.parentRunId = '-1'",
                                       max_results=1)[0]
-        return MLWolfRun(run, self)
+        return Run(run, self)
 
 
-class MLWolfRun:
+class Run:
     @staticmethod
-    def create(name: str, experiment: MLWolfExperiment, parent=None, tags={}):
+    def create(name: str, experiment: Experiment, parent=None, tags={}):
         if parent is not None:
             tags[MLFLOW_PARENT_RUN_ID] = parent.run.info.run_id
         else:
             tags[MLFLOW_PARENT_RUN_ID] = -1
         tags[name] = name
         run = experiment.client.create_run(experiment.id, tags=tags)
-        return MLWolfRun(run, experiment, parent=parent)
+        return Run(run, experiment, parent=parent)
 
-    def __init__(self, run, experiment: MLWolfExperiment, parent=None, tags={}):
+    def __init__(self, run, experiment: Experiment, parent=None, tags={}):
         self.experiment = experiment
         self.client = self.experiment.client
         self.run = run
@@ -82,7 +82,7 @@ class MLWolfRun:
         self.parent = parent
 
     def start_run(self, name='', tags={}):
-        return MLWolfRun.create(name, self.experiment, parent=self, tags=tags)
+        return Run.create(name, self.experiment, parent=self, tags=tags)
 
     def end(self):
         self.experiment.client.set_terminated(self.id)
@@ -192,7 +192,7 @@ class MLWolfRun:
     def childs(self) -> list:
         runs = self.client.search_runs(self.experiment.id,
                                        filter_string=f"tags.mlflow.parentRunId = '{self.id}'")
-        return [MLWolfRun(run, self.experiment) for run in runs]
+        return [Run(run, self.experiment) for run in runs]
 
     def list_artifacts(self, full_path=True) -> list:
         artifacts = self.client.list_artifacts(self.id)
