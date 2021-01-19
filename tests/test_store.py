@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import mlflow
 import mlflowstone as mlflows
 import pandas as pd
 from sklearn import datasets, svm
@@ -35,3 +36,30 @@ class TestStore():
 
         results = [f for f in artifacts if str(f.path).endswith('.csv')][0]
         assert pd.read_csv(results.path).shape[0] == 4
+
+    def test_named_runs(self):
+        iris = datasets.load_iris()
+
+        svc = svm.SVC()
+        svc.fit(iris.data, iris.target)
+        #PATH = Path(__file__).resolve().parent
+        PATH = Path('/tmp')
+        store = mlflows.Store(f'sqlite:///{PATH}/test.sqlite')
+
+        (store
+            .experiment('test_named_runs', Path('.').resolve())
+            .start_run('Named Runs')
+            .log_model(svc, 'LOG', mlflow.sklearn)
+            .end())
+
+        run = store.experiment(
+            'test_named_runs').last_run_with_name('Invalid name')
+        assert run is None
+
+        run = store.experiment(
+            'test_named_runs').last_run_with_name('Named Runs')
+        assert run is not None
+
+        artifacts = run.list_artifacts(full_path=True)
+
+        assert len(artifacts) == 3

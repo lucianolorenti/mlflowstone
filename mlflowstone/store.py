@@ -19,7 +19,7 @@ from mlflow.models.model import Model
 from mlflow.tracking.client import MlflowClient
 from mlflow.tracking.fluent import _get_experiment_id
 from mlflow.utils.file_utils import TempDir
-from mlflow.utils.mlflow_tags import MLFLOW_PARENT_RUN_ID
+from mlflow.utils.mlflow_tags import MLFLOW_PARENT_RUN_ID, MLFLOW_RUN_NAME
 from sklearn.model_selection import GridSearchCV
 
 logger = logging.getLogger(__name__)
@@ -59,8 +59,31 @@ class Experiment:
     def last_parent_run(self):
         run = self.client.search_runs(self.id,
                                       filter_string="tags.mlflow.parentRunId = '-1'",
-                                      max_results=1)[0]
-        return Run(run, self)
+                                      max_results=1)
+        if len(run) > 0:
+            run = run[0]
+            return Run(run, self)
+        else:
+            return None
+
+    def last_run_with_name(self, name: str):
+        run = self.client.search_runs(self.id,
+                                      filter_string=f"tags.mlflow.runName = '{name}'",
+                                      max_results=1)
+        if len(run) > 0:
+            run = run[0]
+            return Run(run, self)
+        else:
+            return None
+
+    def run_exists(self, name: str) -> bool:
+        run = self.client.search_runs(self.id,
+                                      filter_string=f"tags.mlflow.runName = '{name}'",
+                                      max_results=1)
+        if len(run) > 0:
+            return True
+        else:
+            return False
 
 
 class Run:
@@ -70,7 +93,8 @@ class Run:
             tags[MLFLOW_PARENT_RUN_ID] = parent.run.info.run_id
         else:
             tags[MLFLOW_PARENT_RUN_ID] = -1
-        tags[name] = name
+        if len(name) > 0:
+            tags[MLFLOW_RUN_NAME] = name
         run = experiment.client.create_run(experiment.id, tags=tags)
         return Run(run, experiment, parent=parent)
 
@@ -155,7 +179,7 @@ class Run:
                                        "mean", "std"), cv_results[score_name.replace("mean", "std")][run_index])
 
         logger.info("Logging model")
-        self.save_model(gridsearch.best_estimator_, model_name, mlflow.sklearn)
+        self.log_model(gridsearch.best_estimator_, model_name, mlflow.sklearn)
 
         logger.info("Logging CV results matrix")
         self.log_pandas(pd.DataFrame(cv_results), 'cv_results')
@@ -165,7 +189,7 @@ class Run:
             self.client.set_tag(self.id, k, v)
         return self
 
-    def save_model(self, model, name, flavor, **kwargs):
+    def log_model(self, model, name, flavor, **kwargs):
         with TempDir() as tmp:
             local_path = tmp.path("model")
             run_id = self.id
@@ -188,6 +212,7 @@ class Run:
                     "1.7.0 or above.",
                     mlflow.get_artifact_uri(),
                 )
+        return self
 
     def childs(self) -> list:
         runs = self.client.search_runs(self.experiment.id,
