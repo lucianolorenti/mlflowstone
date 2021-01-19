@@ -26,16 +26,16 @@ class TestStore():
          .log_cross_validation(clf, 'SVC')
          .end())
 
-        runs = store.experiment('TestCV').last_parent_run().childs()
-
-        assert len(runs) == 4
-
-        artifacts = runs[0].list_artifacts(full_path=True)
+        artifacts = (store.experiment('TestCV')
+                     .last_parent_run()
+                     .list_artifacts(full_path=True))
 
         assert len(artifacts) == 4
-
         results = [f for f in artifacts if str(f.path).endswith('.csv')][0]
         assert pd.read_csv(results.path).shape[0] == 4
+
+        runs = store.experiment('TestCV').last_parent_run().childs()
+        assert len(runs) == 4
 
     def test_named_runs(self):
         iris = datasets.load_iris()
