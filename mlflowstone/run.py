@@ -1,6 +1,4 @@
 
-from __future__ import annotations
-
 import hashlib
 import json
 import logging
@@ -26,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 class Run:
     @staticmethod
-    def create(name: str, experiment: 'Experiment', parent=None, tags={}) -> Run:
+    def create(name: str, experiment: 'Experiment', parent=None, tags={}) -> 'Run':
         if parent is not None:
             tags[MLFLOW_PARENT_RUN_ID] = parent.run.info.run_id
         else:
@@ -43,13 +41,13 @@ class Run:
         self.id = self.run.info.run_id
         self.parent = parent
 
-    def start_run(self, name='', tags={}) -> Run:
+    def start_run(self, name='', tags={}) -> 'Run':
         return Run.create(name, self.experiment, parent=self, tags=tags)
 
     def end(self):
         self.experiment.client.set_terminated(self.id)
 
-    def log_cross_validation(self, gridsearch: GridSearchCV, model_name: str, tags={}, log_only_best=False) -> Run:
+    def log_cross_validation(self, gridsearch: GridSearchCV, model_name: str, tags={}, log_only_best=False) -> 'Run':
         best = gridsearch.best_index_
         logger.info("Logging model")
         self.log_model(gridsearch.best_estimator_, model_name, mlflow.sklearn)
@@ -75,14 +73,14 @@ class Run:
         filename = "%s-%s.%s" % (filename, timestamp, extension)
         return os.path.join(tempdir, filename)
 
-    def log_pickle(self, data, filename: str) -> Run:
+    def log_pickle(self, data, filename: str) -> 'Run':
         file_path = self._temp_file(filename, 'pkl')
         with open(file_path, 'wb') as file:
             pickle.dump(data, file)
         self.client.log_artifact(self.id, file_path)
         return self
 
-    def log_pandas(self, df: pd.DataFrame, filename) -> Run:
+    def log_pandas(self, df: pd.DataFrame, filename) -> 'Run':
         csv = self._temp_file(filename, 'csv')
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -90,7 +88,7 @@ class Run:
         self.client.log_artifact(self.id, csv)
         return self
 
-    def log_cv_run(self, gridsearch: GridSearchCV, model_name: str, run_index: int, tags={}) -> Run:
+    def log_cv_run(self, gridsearch: GridSearchCV, model_name: str, run_index: int, tags={}) -> 'Run':
         """Logging of cross validation results to mlflow tracking server
 
         https://gist.github.com/liorshk/9dfcb4a8e744fc15650cbd4c2b0955e5
@@ -126,7 +124,7 @@ class Run:
             self.client.set_tag(self.id, k, v)
         return self
 
-    def log_model(self, model, name, flavor, **kwargs) -> Run:
+    def log_model(self, model, name, flavor, **kwargs) -> 'Run':
         with TempDir() as tmp:
             local_path = tmp.path("model")
             run_id = self.id
